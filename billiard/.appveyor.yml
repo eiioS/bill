@@ -1,0 +1,89 @@
+#...............................................................................
+#
+#  This file is part of the Doxyrest toolkit.
+#
+#  Doxyrest is distributed under the MIT license.
+#  For details see accompanying license.txt file,
+#  the public copy of which is also available at:
+#  http://tibbo.com/downloads/archive/doxyrest/license.txt
+#
+#...............................................................................
+
+image:
+    - Visual Studio 2015
+    - Visual Studio 2017
+
+init:
+    - git config --global core.autocrlf input
+
+clone_folder: c:\projects\doxyrest
+shallow_clone: true
+
+platform:
+    - x64
+    - x86
+
+configuration:
+    - Debug
+    - Release
+
+environment:
+    matrix:
+        - TOOLCHAIN: msvc10
+        - TOOLCHAIN: msvc12
+        - TOOLCHAIN: msvc15
+
+matrix:
+    fast_finish: false
+
+    exclude:
+        -   image: Visual Studio 2015
+            TOOLCHAIN: msvc15
+
+        -   image: Visual Studio 2017
+            TOOLCHAIN: msvc10
+
+        -   image: Visual Studio 2017
+            TOOLCHAIN: msvc12
+
+        -   image: Visual Studio 2017
+            TOOLCHAIN: msvc14
+
+
+install:
+    - call ci\appveyor\set-env.bat %TOOLCHAIN% %PLATFORM%
+    - call ci\appveyor\install.bat
+    - git clone --depth 1 https://github.com/vovkos/axl
+
+build_script:
+    - call ci\appveyor\build.bat
+    - ps: Add-AppveyorMessage "APPVEYOR_REPO_COMMIT=$env:APPVEYOR_REPO_COMMIT"
+
+test_script:
+    - ctest -C %CONFIGURATION% --output-on-failure
+
+notifications:
+    -   provider: Webhook
+        on_build_success: true
+        on_build_failure: false
+
+        url: http://jancy.org:5005/appveyor-ci
+
+artifacts:
+    -   path: $(DOXYREST_PACKAGE_FILE)
+        name: doxyrest_package
+
+deploy:
+    description: '$(APPVEYOR_REPO_TAG_NAME)'
+    provider: GitHub
+
+    auth_token:
+        secure: jpZmZjs4rexF7ix1wvN56hvAac2tGVAffQGsygfqMfR34Ls1SkvC1DQaf4On7RTB
+
+    artifact: doxyrest_package
+    force_update: true
+
+    on:
+        appveyor_repo_tag: true
+        toolchain: msvc10
+        configuration: Release
